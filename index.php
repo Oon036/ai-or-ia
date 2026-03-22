@@ -10,7 +10,7 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ - โรงเรียนสาธิตวิทยา</title>
+    <title>เข้าสู่ระบบ - โรงเรียนเจ้าตาก</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -53,11 +53,12 @@ if (isset($_SESSION['user_id'])) {
         <img src="images/favicon.png" alt="School Logo" class="rounded-circle shadow-sm" style="background:#fff; padding:5px;">
         <h3 class="mb-4">เข้าสู่ระบบ</h3>
         
-        <?php if(isset($_GET['error'])): ?>
+        <?php if (isset($_GET['error'])): ?>
             <div class="alert alert-danger" role="alert">
                 ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!
             </div>
-        <?php endif; ?>
+        <?php
+endif; ?>
 
         <form action="login_process.php" method="POST">
             <input type="text" name="username" class="form-control" placeholder="ชื่อผู้ใช้งาน" required>
