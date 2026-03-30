@@ -15,6 +15,25 @@ if ($role == 'admin') {
     
     $sub_stmt = $pdo->query("SELECT COUNT(*) FROM subjects");
     $total_subjects = $sub_stmt->fetchColumn();
+
+    // Fetch today's attendance stats
+    $today = date('Y-m-d');
+    $att_stmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM attendance WHERE date = ? GROUP BY status");
+    $att_stmt->execute([$today]);
+    $att_data = ['Present' => 0, 'Absent' => 0, 'Late' => 0, 'Leave' => 0];
+    while ($row = $att_stmt->fetch()) {
+        $att_data[$row['status']] = $row['count'];
+    }
+
+    // Fetch overall grade distribution
+    $grade_stmt = $pdo->query("SELECT grade, COUNT(*) as count FROM grades GROUP BY grade");
+    $grade_data = ['4' => 0, '3' => 0, '2' => 0, '1' => 0, '0' => 0];
+    while ($row = $grade_stmt->fetch()) {
+        $g = (string)intval($row['grade']); 
+        if (isset($grade_data[$g])) {
+            $grade_data[$g] += $row['count']; 
+        }
+    }
 }
 ?>
 <div class="container-fluid">
@@ -116,7 +135,12 @@ if ($role == 'admin') {
             data: {
                 labels: ['มาเรียน', 'ขาด', 'สาย', 'ลา'],
                 datasets: [{
-                    data: [80, 5, 10, 5], // Example default data
+                    data: [
+                        <?php echo $att_data['Present']; ?>, 
+                        <?php echo $att_data['Absent']; ?>, 
+                        <?php echo $att_data['Late']; ?>, 
+                        <?php echo $att_data['Leave']; ?>
+                    ],
                     backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e', '#36b9cc'],
                     hoverBorderColor: "rgba(234, 236, 244, 1)"
                 }]
@@ -137,7 +161,13 @@ if ($role == 'admin') {
                 labels: ['เกรด 4', 'เกรด 3', 'เกรด 2', 'เกรด 1', 'เกรด 0'],
                 datasets: [{
                     label: 'จำนวนนักเรียน',
-                    data: [45, 70, 50, 20, 10], // Example default data
+                    data: [
+                        <?php echo $grade_data['4']; ?>, 
+                        <?php echo $grade_data['3']; ?>, 
+                        <?php echo $grade_data['2']; ?>, 
+                        <?php echo $grade_data['1']; ?>, 
+                        <?php echo $grade_data['0']; ?>
+                    ], 
                     backgroundColor: '#FB9B8F',
                     borderRadius: 4
                 }]

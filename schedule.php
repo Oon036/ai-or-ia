@@ -42,6 +42,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role === 'admin') {
             } catch(PDOException $e) {
                 $err_message = "เกิดข้อผิดพลาด: " . $e->getMessage();
             }
+        } elseif ($action == 'edit') {
+            $id = $_POST['id'];
+            $subj_id = $_POST['subject_id'];
+            $teacher_id = $_POST['teacher_id'];
+            $class_id = $_POST['class_id'];
+            $room_id = $_POST['room_id'];
+            $day = $_POST['day_of_week'];
+            $s_time = $_POST['start_time'];
+            $e_time = $_POST['end_time'];
+
+            try {
+                $overlap_stmt = $pdo->prepare("SELECT id FROM schedule WHERE (teacher_id = ? OR room_id = ? OR class_id = ?) AND day_of_week = ? AND ((start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)) AND id != ?");
+                $overlap_stmt->execute([$teacher_id, $room_id, $class_id, $day, $e_time, $s_time, $s_time, $e_time, $id]);
+                
+                if ($overlap_stmt->rowCount() > 0) {
+                    $err_message = "พบการซ้อนทับของเวลาเรียนสำหรับครู, ห้องเรียน หรือชั้นเรียนในวันและเวลานี้!";
+                } else {
+                    $stmt = $pdo->prepare("UPDATE schedule SET subject_id=?, teacher_id=?, class_id=?, room_id=?, day_of_week=?, start_time=?, end_time=? WHERE id=?");
+                    $stmt->execute([$subj_id, $teacher_id, $class_id, $room_id, $day, $s_time, $e_time, $id]);
+                    $message = "แก้ไขตารางเรียนเรียบร้อยแล้ว";
+                }
+            } catch(PDOException $e) {
+                $err_message = "เกิดข้อผิดพลาด: " . $e->getMessage();
+            }
         } elseif ($action == 'delete') {
             $id = $_POST['id'];
             try {
@@ -66,6 +90,7 @@ $days = ['Monday'=>'จันทร์', 'Tuesday'=>'อังคาร', 'Wedne
 // Fetch Schedule 
 $query = "
     SELECT sch.id, sch.day_of_week, sch.start_time, sch.end_time,
+           sch.subject_id, sch.teacher_id, sch.class_id, sch.room_id,
            subj.subject_code, subj.subject_name,
            t.prefix, t.first_name, t.last_name,
            c.class_name, r.room_name
@@ -136,12 +161,92 @@ $schedules = $pdo->query($query)->fetchAll();
                             <td><?php echo htmlspecialchars($sch['room_name'] ?? '-'); ?></td>
                             <?php if($role == 'admin'): ?>
                             <td>
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal<?php echo $sch['id']; ?>"><i class="fas fa-edit"></i> แก้ไข</button>
                                 <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal<?php echo $sch['id']; ?>"><i class="fas fa-trash"></i> ลบ</button>
                             </td>
                             <?php endif; ?>
                         </tr>
 
                         <?php if($role == 'admin'): ?>
+                        <!-- Edit Modal -->
+                        <div class="modal fade" id="editModal<?php echo $sch['id']; ?>" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <form action="schedule.php" method="POST">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">แก้ไขตารางเรียน</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <input type="hidden" name="action" value="edit">
+                                            <input type="hidden" name="id" value="<?php echo $sch['id']; ?>">
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label>วิชา</label>
+                                                    <select name="subject_id" class="form-control" required>
+                                                        <?php foreach($subjects as $s): ?>
+                                                            <option value="<?php echo $s['id']; ?>" <?php echo $sch['subject_id']==$s['id']?'selected':''; ?>><?php echo htmlspecialchars($s['subject_code'].' '.$s['subject_name']); ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>ครูผู้สอน</label>
+                                                    <select name="teacher_id" class="form-control" required>
+                                                        <?php foreach($teachers as $t): ?>
+                                                            <option value="<?php echo $t['id']; ?>" <?php echo $sch['teacher_id']==$t['id']?'selected':''; ?>><?php echo htmlspecialchars($t['prefix'].$t['first_name'].' '.$t['last_name']); ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label>ระดับชั้น</label>
+                                                    <select name="class_id" class="form-control" required>
+                                                        <?php foreach($classes as $c): ?>
+                                                            <option value="<?php echo $c['id']; ?>" <?php echo $sch['class_id']==$c['id']?'selected':''; ?>><?php echo htmlspecialchars($c['class_name']); ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>ห้องเรียน</label>
+                                                    <select name="room_id" class="form-control" required>
+                                                        <?php foreach($rooms as $r): ?>
+                                                            <option value="<?php echo $r['id']; ?>" <?php echo $sch['room_id']==$r['id']?'selected':''; ?>><?php echo htmlspecialchars($r['room_name']); ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <label>วัน</label>
+                                                    <select name="day_of_week" class="form-control" required>
+                                                        <?php foreach($days as $en => $th): ?>
+                                                            <option value="<?php echo $en; ?>" <?php echo $sch['day_of_week']==$en?'selected':''; ?>><?php echo $th; ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label>เวลาเริ่ม</label>
+                                                    <input type="time" name="start_time" class="form-control" required value="<?php echo date('H:i', strtotime($sch['start_time'])); ?>">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label>เวลาสิ้นสุด</label>
+                                                    <input type="time" name="end_time" class="form-control" required value="<?php echo date('H:i', strtotime($sch['end_time'])); ?>">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                            <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                         <!-- Delete Modal -->
                         <div class="modal fade" id="deleteModal<?php echo $sch['id']; ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">

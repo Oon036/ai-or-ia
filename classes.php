@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$classes_stmt = $pdo->query("SELECT * FROM classes ORDER BY class_name ASC");
+$classes_stmt = $pdo->query("SELECT * FROM classes ORDER BY class_name DESC");
 $classes = $classes_stmt->fetchAll();
 ?>
 

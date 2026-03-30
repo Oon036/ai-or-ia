@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch classes enum
-$classes_stmt = $pdo->query("SELECT id, class_name FROM classes ORDER BY class_name ASC");
+$classes_stmt = $pdo->query("SELECT id, class_name FROM classes ORDER BY class_name DESC");
 $classes = $classes_stmt->fetchAll();
 
 // Fetch all students
@@ -98,7 +98,7 @@ $students_stmt = $pdo->query("
     SELECT s.*, c.class_name 
     FROM students s 
     LEFT JOIN classes c ON s.class_id = c.id 
-    ORDER BY s.id DESC
+    ORDER BY c.class_name DESC, s.student_code ASC
 ");
 $students = $students_stmt->fetchAll();
 ?>
