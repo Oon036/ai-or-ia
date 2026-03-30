@@ -4,6 +4,7 @@ require_once 'includes/db.php';
 include 'includes/header.php';
 
 $role = $_SESSION['role'] ?? '';
+$ref_id = $_SESSION['reference_id'] ?? 0;
 
 // For Admin: Count teachers, students, subjects
 if ($role == 'admin') {
@@ -34,6 +35,21 @@ if ($role == 'admin') {
             $grade_data[$g] += $row['count']; 
         }
     }
+} elseif ($role == 'teacher') {
+    // count classes taught
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT class_id) FROM schedule WHERE teacher_id = ?");
+    $stmt->execute([$ref_id]);
+    $teacher_classes = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT room_id) FROM schedule WHERE teacher_id = ?");
+    $stmt->execute([$ref_id]);
+    $teacher_rooms = $stmt->fetchColumn();
+} elseif ($role == 'student') {
+    // get class info
+    $stmt = $pdo->prepare("SELECT c.class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE s.id = ?");
+    $stmt->execute([$ref_id]);
+    $student_class = $stmt->fetchColumn();
+    if (!$student_class) $student_class = '-';
 }
 ?>
 <div class="container-fluid">
@@ -188,10 +204,69 @@ if ($role == 'admin') {
     });
     </script>
     
-    <?php else: ?>
-        <div class="alert alert-info">
-            <h4 class="alert-heading">ยินดีต้อนรับเข้าสู่ระบบ!</h4>
-            <p>สวัสดีคุณ <?php echo htmlspecialchars($_SESSION['username']); ?> คุณสามารถเลือกเมนูจากแถบด้านข้างเพื่อเริ่มต้นใช้งาน</p>
+    <?php elseif ($role == 'teacher'): ?>
+        <div class="row">
+            <div class="col-xl-6 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2" style="border-left: 5px solid #f6c23e !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1" style="color:#f6c23e;">จำนวนชั้นเรียนที่สอน</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $teacher_classes; ?> ชั้นเรียน</div>
+                            </div>
+                            <div class="col-auto float-end text-end ms-auto">
+                                <i class="fas fa-layer-group fa-2x text-muted opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-6 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2" style="border-left: 5px solid #1cc88a !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1" style="color:#1cc88a;">จำนวนห้องเรียนที่เข้าสอน</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $teacher_rooms; ?> ห้อง</div>
+                            </div>
+                            <div class="col-auto float-end text-end ms-auto">
+                                <i class="fas fa-door-open fa-2x text-muted opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info border-0 shadow-sm">
+            <h5 class="alert-heading fw-bold"><i class="fas fa-chalkboard-teacher me-2"></i>ระบบจัดการสำหรับครู</h5>
+            <p class="mb-0">สวัสดีบัญชีครูผู้สอน! เลือกเมนูทางซ้ายเพื่อบันทึกตาราง เช็คชื่อ หรือให้คะแนนนักเรียนตามชั้นเรียนที่ท่านรับผิดชอบได้เลยครับ</p>
+        </div>
+
+    <?php elseif ($role == 'student'): ?>
+        <div class="row">
+            <div class="col-xl-12 col-md-12 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2" style="border-left: 5px solid #FB9B8F !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1" style="color:#FB9B8F;">ข้อมูลของฉัน</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800 mt-2">
+                                    <span class="fs-6 text-muted border-end pe-3 me-3">รหัสนักเรียน: <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></span>
+                                    <span class="fs-6 text-muted border-end pe-3 me-3">สังกัดชั้นเรียน: <strong class="text-primary"><?php echo htmlspecialchars($student_class); ?></strong></span>
+                                </div>
+                            </div>
+                            <div class="col-auto float-end text-end ms-auto">
+                                <i class="fas fa-id-card fa-3x text-muted opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-success border-0 shadow-sm">
+            <h5 class="alert-heading fw-bold"><i class="fas fa-user-graduate me-2"></i>สวัสดีนักเรียนใหม่!</h5>
+            <p class="mb-0">เตรียมตัวให้พร้อมสำหรับการเรียน! คุณสามารถเช็คดู **ตารางเรียนของฉัน** หรือตรวจสอบ **ผลการเรียนของฉัน** ได้ผ่านเมนูด้านซ้ายมือครับ</p>
         </div>
     <?php endif; ?>
 </div>
